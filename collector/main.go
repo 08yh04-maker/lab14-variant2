@@ -141,12 +141,6 @@ func (c *Collector) runWorker(city string) {
 				continue
 			}
 
-			// Валидация через Rust-библиотеку
-			result := ValidateWeatherData(*data)
-			if !result.IsValid {
-				log.Printf("Validation failed for %s: %s", city, result.ErrorMessage)
-				continue
-			}
 
 			c.dataChan <- *data
 		}
