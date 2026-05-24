@@ -26,7 +26,7 @@ def load_aggregated_data():
     with open(json_file, 'r') as f:
         for line in f:
             if line.strip():
-                data.append(eval(line))
+                data.append(json.loads(line))
     
     if not data:
         return None
