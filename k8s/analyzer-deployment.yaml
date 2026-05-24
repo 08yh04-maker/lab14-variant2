@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-analyzer
+  namespace: data-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weather-analyzer
+  template:
+    metadata:
+      labels:
+        app: weather-analyzer
+    spec:
+      containers:
+      - name: analyzer
+        image: weather-analyzer:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8501
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-analyzer-service
+  namespace: data-pipeline
+spec:
+  selector:
+    app: weather-analyzer
+  ports:
+  - port: 8501
+    targetPort: 8501
+  type: NodePort

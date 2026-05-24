@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-collector
+  namespace: data-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weather-collector
+  template:
+    metadata:
+      labels:
+        app: weather-collector
+    spec:
+      containers:
+      - name: collector
+        image: weather-collector:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+        env:
+        - name: OPENWEATHER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: weather-secret
+              key: OPENWEATHER_API_KEY
+        - name: CITIES
+          valueFrom:
+            configMapKeyRef:
+              name: collector-config
+              key: CITIES
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 50051
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 50051
+          initialDelaySeconds: 5
+          periodSeconds: 5
