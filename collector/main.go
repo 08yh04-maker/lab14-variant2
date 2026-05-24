@@ -136,11 +136,19 @@ func (c *Collector) runWorker(city string) {
 			return
 		case <-ticker.C:
 			log.Printf("Fetching weather for %s", city)
-			data, err := c.fetchWeather(city)
+						data, err := c.fetchWeather(city)
 			if err != nil {
 				log.Printf("Error fetching %s: %v", city, err)
 				continue
 			}
+			
+			// Валидация через Rust-библиотеку
+			result := ValidateWeatherData(*data)
+			if !result.IsValid {
+				log.Printf("Validation failed for %s: %s", city, result.ErrorMessage)
+				continue
+			}
+			
 			c.dataChan <- *data
 		}
 	}
@@ -236,6 +244,8 @@ func main() {
 	// Обработка сигналов graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// Запускаем Arrow сервер в отдельной горутине
+	go StartArrowServer()
 
 	collector.Run()
 
