@@ -40,7 +40,7 @@ def benchmark_python():
     }
 
 def benchmark_go():
-    # Симулированные данные (замени на реальные при запуске Go)
+    # Симулированные данные
     return {
         "time": 0.15,
         "cpu": 8.0,
@@ -70,7 +70,8 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig("benchmark_chart.png")
 
-    report = f"""# Performance Comparison: Go vs Python
+    with open("benchmark_report.md", "w") as f:
+        f.write(f"""# Performance Comparison: Go vs Python
 
 ## Python (asyncio/aiohttp)
 - Time: {py['time']:.2f} sec
@@ -88,8 +89,6 @@ if __name__ == "__main__":
 Go collector is faster and more memory efficient.
 
 ![Chart](benchmark_chart.png)
-"""
-    with open("benchmark_report.md", "w") as f:
-        f.write(report)
+""")
 
     print("Benchmark complete. Report saved to benchmark_report.md")
