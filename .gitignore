@@ -48,3 +48,8 @@ Thumbs.db
 
 # Docker
 *.log
+
+# Rust
+/target/
+validator/target/
+*.rs.bk
