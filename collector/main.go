@@ -40,7 +40,6 @@ type Collector struct {
 
 // NewCollector создаёт новый сборщик
 func NewCollector(apiKey string, cities []string) (*Collector, error) {
-	// Подключаемся к etcd
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{"localhost:2379"},
 		DialTimeout: 5 * time.Second,
@@ -66,7 +65,7 @@ func NewCollector(apiKey string, cities []string) (*Collector, error) {
 // fetchWeather собирает погоду для одного города
 func (c *Collector) fetchWeather(city string) (*WeatherData, error) {
 	url := fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric&lang=ru", city, c.apiKey)
-	
+
 	var response struct {
 		Main struct {
 			Temp     float64 `json:"temp"`
@@ -125,7 +124,7 @@ func (c *Collector) saveToFile(data WeatherData) error {
 // runWorker запускает воркер для сбора данных
 func (c *Collector) runWorker(city string) {
 	defer c.wg.Done()
-	
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -136,19 +135,19 @@ func (c *Collector) runWorker(city string) {
 			return
 		case <-ticker.C:
 			log.Printf("Fetching weather for %s", city)
-						data, err := c.fetchWeather(city)
+			data, err := c.fetchWeather(city)
 			if err != nil {
 				log.Printf("Error fetching %s: %v", city, err)
 				continue
 			}
-			
+
 			// Валидация через Rust-библиотеку
 			result := ValidateWeatherData(*data)
 			if !result.IsValid {
 				log.Printf("Validation failed for %s: %s", city, result.ErrorMessage)
 				continue
 			}
-			
+
 			c.dataChan <- *data
 		}
 	}
@@ -163,7 +162,6 @@ func (c *Collector) writeWorker() {
 	for {
 		select {
 		case <-c.ctx.Done():
-			// Записываем остатки при завершении
 			for _, data := range buffer {
 				c.saveToFile(data)
 			}
@@ -171,19 +169,19 @@ func (c *Collector) writeWorker() {
 		case data := <-c.dataChan:
 			buffer = append(buffer, data)
 			if len(buffer) >= 100 {
+				log.Printf("Flushed 100 records to file")
 				for _, d := range buffer {
 					c.saveToFile(d)
 				}
 				buffer = buffer[:0]
-				log.Printf("Flushed 100 records to file")
 			}
 		case <-ticker.C:
 			if len(buffer) > 0 {
+				log.Printf("Flushed %d records to file (timeout)", len(buffer))
 				for _, d := range buffer {
 					c.saveToFile(d)
 				}
 				buffer = buffer[:0]
-				log.Printf("Flushed %d records to file (timeout)", len(buffer))
 			}
 		}
 	}
@@ -191,16 +189,13 @@ func (c *Collector) writeWorker() {
 
 // Run запускает сборщик
 func (c *Collector) Run() {
-	// Создаём папку для данных
 	os.MkdirAll("data", 0755)
 
-	// Запускаем воркеров для каждого города
 	for _, city := range c.cities {
 		c.wg.Add(1)
 		go c.runWorker(city)
 	}
 
-	// Запускаем writer
 	go c.writeWorker()
 
 	log.Printf("Collector started with %d cities", len(c.cities))
@@ -216,10 +211,9 @@ func (c *Collector) Stop() {
 }
 
 func main() {
-	// Получаем API ключ из переменной окружения
 	apiKey := os.Getenv("OPENWEATHER_API_KEY")
 	if apiKey == "" {
-		apiKey = "test_key" // Для тестирования без API
+		apiKey = "test_key"
 		log.Println("Warning: OPENWEATHER_API_KEY not set, using test mode")
 	}
 
@@ -241,10 +235,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Обработка сигналов graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	// Запускаем Arrow сервер в отдельной горутине
+
 	go StartArrowServer()
 
 	collector.Run()
